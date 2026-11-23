@@ -9,11 +9,13 @@ import { createHmac } from "node:crypto";
 // >   "occurred_at": "2026-11-10T12:00:00Z"
 // > }
 
+// PRECISAR ASSINAR SOBRE OS EXATOS BYTES ENVIADO + SECRET CONFORME PADRAO HMAMAC
+
 const resolveSecret = () => {
   return process.env.WEBHOOK_SECRET ?? "dev-secret";
 };
 
-const signWebhookSecret = (payload) => {
+const signWebhookSecret = (payload, rawBody) => {
   data = JSON.stringify(payload);
   secret = resolveSecret();
 
