@@ -1,0 +1,19 @@
+{
+  "name": "pleno-web-webhooks-pagamento",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Desafio técnico (pleno/web): receptor de webhooks de pagamento",
+  "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "start": "node src/server.js",
+    "dev": "node --watch src/server.js",
+    "test": "node --test test/*.test.js",
+    "webhook": "node scripts/send-webhook.js"
+  },
+  "dependencies": {
+    "fastify": "^5.12.8"
+  }
+}
