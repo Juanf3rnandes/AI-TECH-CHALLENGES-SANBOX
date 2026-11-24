@@ -15,8 +15,7 @@ export function buildApp({
     return order;
   });
 
-  // TODO(desafio): implementar o processamento do webhook do PagFácil.
-  app.register(webhookRoutes);
+  app.register(webhookRoutes, { store, fulfillment, webhookSecret });
 
   return app;
 }
