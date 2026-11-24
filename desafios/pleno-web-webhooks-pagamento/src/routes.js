@@ -1,5 +1,3 @@
-import Fastify from "fastify";
-
 import { createHmac } from "node:crypto";
 
 // PAYLOAD DO WEBHOOK
@@ -16,6 +14,14 @@ const resolveCredentials = () => {
 };
 
 export async function webhookRoutes(fastify) {
+  fastify.addContentTypeParser(
+    "application/json",
+    { parseAs: "buffer" },
+    (request, body, done) => {
+      request.rawBody = body; // Buffer com os bytes exatos que chegaram
+      done(null, body); // ainda não faz JSON.parse
+    },
+  );
   fastify.route({
     method: "POST",
     url: "/webhooks/payments",
@@ -29,12 +35,17 @@ export async function webhookRoutes(fastify) {
       const validFormat = /^sha256=[0-9a-f]{64}$/;
       const secret = resolveCredentials();
 
-      // const isSignatureValid = createHmac(rawBytes, secret);
+      const expected =
+        "sha256=" +
+        createHmac("sha256", secret).update(request.rawBody).digest("hex");
 
-      if (!signature || !validFormat.test(signature)) {
-        return reply
-          .code(401)
-          .send({ error: "Assinatura invalida ou ausente" });
+      const valid =
+        signature &&
+        validFormat.test(signature) &&
+        timingSafeEqual(Buffer.from(signature), Buffer.from(expected));
+
+      if (!valid) {
+        return reply.code(401);
       }
     },
   });

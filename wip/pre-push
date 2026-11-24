@@ -1,0 +1,58 @@
+#!/usr/bin/env bash
+
+# Run every challenge's automated test suite before allowing a push.
+# Any missing test command or failing suite blocks the push (non-zero exit).
+
+set -uo pipefail
+
+script_dir="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+repo_root="$(cd -- "$script_dir/.." && pwd)"
+challenges_dir="$repo_root/desafios"
+
+if [[ ! -d "$challenges_dir" ]]; then
+  echo "pre-push: diretório desafios/ não encontrado; push bloqueado." >&2
+  exit 1
+fi
+
+shopt -s nullglob
+projects=("$challenges_dir"/*)
+if (( ${#projects[@]} == 0 )); then
+  echo "pre-push: nenhum desafio encontrado para testar; push bloqueado." >&2
+  exit 1
+fi
+
+failed=0
+for project_dir in "${projects[@]}"; do
+  [[ -d "$project_dir" ]] || continue
+  project_name="${project_dir#"$challenges_dir"/}"
+
+  echo "pre-push: executando testes de $project_name"
+  if [[ -f "$project_dir/package.json" ]]; then
+    (cd "$project_dir" && npm test)
+  elif [[ -f "$project_dir/go.mod" ]]; then
+    (cd "$project_dir" && go test ./...)
+  elif [[ -f "$project_dir/Cargo.toml" ]]; then
+    (cd "$project_dir" && cargo test)
+  elif [[ -f "$project_dir/pyproject.toml" || -f "$project_dir/pytest.ini" || -f "$project_dir/tox.ini" ]]; then
+    (cd "$project_dir" && python3 -m pytest)
+  elif [[ -f "$project_dir/Makefile" ]] && grep -Eq '^test:' "$project_dir/Makefile"; then
+    (cd "$project_dir" && make test)
+  else
+    echo "pre-push: não encontrei um comando de testes conhecido em $project_name; push bloqueado." >&2
+    failed=1
+    continue
+  fi
+
+  result=$?
+  if (( result != 0 )); then
+    echo "pre-push: testes falharam em $project_name; push bloqueado." >&2
+    failed=1
+  fi
+done
+
+if (( failed != 0 )); then
+  exit 1
+fi
+
+echo "pre-push: todos os testes passaram."
+exit 0
